@@ -11,6 +11,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Serializer\Encoder\CsvEncoder;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\Validator\Constraint;
+use Symfony\Component\Validator\Validation;
+use Symfony\Component\Validator\Constraints as Assert;
 
 class ImportProductsCommand extends Command
 {
@@ -19,10 +22,12 @@ class ImportProductsCommand extends Command
 
     protected static $defaultName = 'app:import-products';
 
+    private array $rows;
     private EntityManagerInterface $em;
 
     public function __construct(EntityManagerInterface $em)
     {
+        $this->rows = [];
         $this->em = $em;
 
         parent::__construct();
@@ -32,8 +37,7 @@ class ImportProductsCommand extends Command
     {
         $this
             ->setHelp('This command allows you to import products from a CSV file')
-            ->addArgument('filename', InputArgument::REQUIRED, 'The filename of the import CSV file.')
-        ;
+            ->addArgument('filename', InputArgument::REQUIRED, 'The filename of the import CSV file.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -41,48 +45,123 @@ class ImportProductsCommand extends Command
         $fileName = $input->getArgument('filename');
 
         $serializer = new Serializer([new ObjectNormalizer()], [new CsvEncoder()]);
-        $rows = $serializer->decode(file_get_contents($fileName), 'csv');
+        $this->rows = $serializer->decode(file_get_contents($fileName), 'csv');
 
-        foreach ($rows as &$row) {
-            $name = $row['Product Name'];
-            $desc = $row['Product Description'];
-            $code = $row['Product Code'];
-            $stock = (int)($row['Stock'] ?? 0);
-            $price = isset($row['Cost in GBP']) ? (float)$row['Cost in GBP'] : null;
-            $discontinued = $row['Discontinued'] ?? null;
+        $qty = count($this->rows);
+        $output->writeln("Processing {$qty} row(s):");
 
-            $product = (new ProductData())
-                ->setProductName($name)
-                ->setProductDesc($desc)
-                ->setProductCode($code)
-                ->setStock($stock)
-                ->setPrice($price);
+        $validator = Validation::createValidator();
+        $constraints = $this->getConstraints();
 
-            if ($discontinued === 'yes') {
-                $product->setDiscontinued(new \DateTime());
+        $output->write("[");
+        foreach ($this->rows as $i => $row) {
+            $errors = $validator->validate($row, $constraints);
+
+            if (0 === count($errors)) {
+                $product = $this->createProductData($row);
+
+                try {
+                    $this->em->persist($product);
+                    $this->em->flush();
+
+                    $this->setRowStatus($i, self::STATUS_SUCCESSFUL);
+                } catch (\Exception $exception) {
+                    $this->setRowStatus($i, self::STATUS_SKIPPED);
+                    $this->setRowError($i, $exception->getMessage());
+                }
+            } else {
+                $this->setRowStatus($i, self::STATUS_SKIPPED);
+                $errorMessage = "";
+                foreach ($errors as $error) {
+                    $errorMessage .= "\n". $error;
+                }
+                $this->setRowError($i, $errorMessage);
             }
-
-            try {
-                $this->em->persist($product);
-                $this->em->flush();
-                $row['status'] = self::STATUS_SUCCESSFUL;
-            } catch (\Exception $exception) {
-                $row['status'] = self::STATUS_SKIPPED;
-            }
+            $output->write("*");
         }
+        $output->writeln("]");
 
-        $qty = count($rows);
+        $qty = count($this->rows);
         $output->writeln("Processed {$qty} row(s)");
-        $qty = $this->getRowsCountByStatus($rows, self::STATUS_SUCCESSFUL);
-        $output->writeln("Successfully {$qty} row(s)");
-        $qty = $this->getRowsCountByStatus($rows, self::STATUS_SKIPPED);
-        $output->writeln("Skipped {$qty} row(s)");
+        $successfulQty = $this->getRowsCountByStatus(self::STATUS_SUCCESSFUL);
+        $output->writeln("Successfully {$successfulQty} row(s)");
+        $output->writeln("==========================");
+
+        $skippedQty = $this->getRowsCountByStatus(self::STATUS_SKIPPED);
+        if ($skippedQty > 0) {
+            $output->writeln("Skipped {$skippedQty} row(s):");
+            foreach ($this->rows as $i => $row) {
+                if ($row['status'] !== self::STATUS_SKIPPED) {
+                    continue;
+                }
+
+                $nRow = $i + 2;
+                $code = $row['Product Code'] ?? 'Unknown';
+                $error = $row['error'] ?? '-';
+                $output->writeln("Line {$nRow} with the code '{$code}': {$error}");
+            }
+
+            $output->writeln("==========================");
+        }
 
         return Command::SUCCESS;
     }
 
-    private function getRowsCountByStatus(array $rows, string $status): int
+    private function getConstraints(): Constraint
     {
-        return count(array_filter($rows, fn($r) => $r['status'] === $status));
+        return new Assert\Collection([
+            'Product Name' => [new Assert\Required(), new Assert\NotBlank()],
+            'Product Description' => [new Assert\Required(), new Assert\NotBlank()],
+            'Product Code' => [new Assert\Required(), new Assert\NotBlank()],
+            'Stock' => new Assert\PositiveOrZero(),
+            'Cost in GBP' => new Assert\AtLeastOneOf([new Assert\Blank(), new Assert\PositiveOrZero()]),
+            'Discontinued' => new Assert\AtLeastOneOf([new Assert\Blank(), new Assert\Choice(['yes'])]),
+        ]);
+    }
+
+    private function setRowStatus(int $index, string $status): void
+    {
+        $this->rows[$index]['status'] = $status;
+    }
+
+    private function setRowError(int $index, string $error): void
+    {
+        $this->rows[$index]['error'] = $error;
+    }
+
+    private function getRowsCountByStatus(string $status): int
+    {
+        $count = 0;
+
+        foreach ($this->rows as $row) {
+            if ($row['status'] === $status) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    private function createProductData(array $row): ProductData
+    {
+        $name = $row['Product Name'];
+        $desc = $row['Product Description'];
+        $code = $row['Product Code'];
+        $stock = (int)($row['Stock'] ?? 0);
+        $price = isset($row['Cost in GBP']) ? (float)$row['Cost in GBP'] : null;
+        $discontinued = $row['Discontinued'] ?? null;
+
+        $product = (new ProductData())
+            ->setProductName($name)
+            ->setProductDesc($desc)
+            ->setProductCode($code)
+            ->setStock($stock)
+            ->setPrice($price);
+
+        if ($discontinued === 'yes') {
+            $product->setDiscontinued(new \DateTime());
+        }
+
+        return $product;
     }
 }

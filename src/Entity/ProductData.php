@@ -35,6 +35,16 @@ class ProductData
     private string $productCode;
 
     /**
+     * @ORM\Column(type="integer", options={"default":0})
+     */
+    private int $stock;
+
+    /**
+     * @ORM\Column(type="float", nullable=true)
+     */
+    private ?float $price;
+
+    /**
      * @ORM\Column(type="datetime", name="dtmAdded", nullable=true)
      */
     private ?DateTime $added;
@@ -79,6 +89,22 @@ class ProductData
     public function getProductCode(): string
     {
         return $this->productCode;
+    }
+
+    /**
+     * @return int
+     */
+    public function getStock(): int
+    {
+        return $this->stock;
+    }
+
+    /**
+     * @return float|null
+     */
+    public function getPrice(): ?float
+    {
+        return $this->price;
     }
 
     /**

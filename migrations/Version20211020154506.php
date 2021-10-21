@@ -36,4 +36,9 @@ final class Version20211020154506 extends AbstractMigration
     {
         $this->addSql('DROP TABLE tblProductData');
     }
+
+    public function isTransactional(): bool
+    {
+        return false;
+    }
 }

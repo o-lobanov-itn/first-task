@@ -59,6 +59,11 @@ class ProductData
      */
     private DateTime $timestamp;
 
+    public function __construct()
+    {
+        $this->timestamp = new DateTime();
+    }
+
     /**
      * @return int
      */
@@ -129,5 +134,75 @@ class ProductData
     public function getTimestamp(): DateTime
     {
         return $this->timestamp;
+    }
+
+    /**
+     * @param string $productName
+     * @return ProductData
+     */
+    public function setProductName(string $productName): ProductData
+    {
+        $this->productName = $productName;
+        return $this;
+    }
+
+    /**
+     * @param string $productDesc
+     * @return ProductData
+     */
+    public function setProductDesc(string $productDesc): ProductData
+    {
+        $this->productDesc = $productDesc;
+        return $this;
+    }
+
+    /**
+     * @param string $productCode
+     * @return ProductData
+     */
+    public function setProductCode(string $productCode): ProductData
+    {
+        $this->productCode = $productCode;
+        return $this;
+    }
+
+    /**
+     * @param int $stock
+     * @return ProductData
+     */
+    public function setStock(int $stock): ProductData
+    {
+        $this->stock = $stock;
+        return $this;
+    }
+
+    /**
+     * @param float|null $price
+     * @return ProductData
+     */
+    public function setPrice(?float $price): ProductData
+    {
+        $this->price = $price;
+        return $this;
+    }
+
+    /**
+     * @param DateTime|null $added
+     * @return ProductData
+     */
+    public function setAdded(?DateTime $added): ProductData
+    {
+        $this->added = $added;
+        return $this;
+    }
+
+    /**
+     * @param DateTime|null $discontinued
+     * @return ProductData
+     */
+    public function setDiscontinued(?DateTime $discontinued): ProductData
+    {
+        $this->discontinued = $discontinued;
+        return $this;
     }
 }

@@ -10,6 +10,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Serializer\Encoder\CsvEncoder;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
@@ -47,12 +48,25 @@ class ImportProductsCommand extends Command
     {
         $this
             ->setHelp('This command allows you to import products from a CSV file')
-            ->addArgument('filename', InputArgument::REQUIRED, 'The filename of the import CSV file.');
+            ->addArgument('filename', InputArgument::REQUIRED, 'The filename of the import CSV file.')
+            ->addOption(
+                'test',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'Is it test (without saving data)?',
+                false
+            )
+        ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $fileName = $input->getArgument('filename');
+        $isTest = $input->getOption('test') === null;
+
+        if (true === $isTest) {
+            $output->writeln("Warning: this command is in test mode!");
+        }
 
         $serializer = new Serializer([new ObjectNormalizer()], [new CsvEncoder()]);
         $this->rows = $serializer->decode(file_get_contents($fileName), 'csv');
@@ -78,8 +92,10 @@ class ImportProductsCommand extends Command
                 }
 
                 try {
-                    $this->em->persist($product);
-                    $this->em->flush();
+                    if (false === $isTest) {
+                        $this->em->persist($product);
+                        $this->em->flush();
+                    }
 
                     $this->setRowStatus($i, self::STATUS_SUCCESSFUL);
                 } catch (\Exception $exception) {

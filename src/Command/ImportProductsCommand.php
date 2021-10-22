@@ -2,7 +2,10 @@
 
 namespace App\Command;
 
+use App\Domain\ImportRule\CostFrom5OrStockFrom10Rule;
+use App\Domain\ImportRule\CostLessOrEqual1000Rule;
 use App\Entity\ProductData;
+use App\Service\ImportRuleEngine;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -24,11 +27,18 @@ class ImportProductsCommand extends Command
 
     private array $rows;
     private EntityManagerInterface $em;
+    private ImportRuleEngine $importRuleEngine;
 
-    public function __construct(EntityManagerInterface $em)
+    public function __construct(EntityManagerInterface $em, ImportRuleEngine $importRuleEngine)
     {
         $this->rows = [];
         $this->em = $em;
+        $this->importRuleEngine = $importRuleEngine;
+
+        $this->importRuleEngine
+            ->addRule(new CostFrom5OrStockFrom10Rule())
+            ->addRule(new CostLessOrEqual1000Rule())
+        ;
 
         parent::__construct();
     }
@@ -60,6 +70,13 @@ class ImportProductsCommand extends Command
             if (0 === count($errors)) {
                 $product = $this->createProductData($row);
 
+                $ruleErrors = $this->importRuleEngine->validate($product);
+                if (0 !== count($ruleErrors)) {
+                    $this->setRowStatus($i, self::STATUS_SKIPPED);
+                    $this->setRowError($i, $ruleErrors);
+                    continue;
+                }
+
                 try {
                     $this->em->persist($product);
                     $this->em->flush();
@@ -71,11 +88,7 @@ class ImportProductsCommand extends Command
                 }
             } else {
                 $this->setRowStatus($i, self::STATUS_SKIPPED);
-                $errorMessage = "";
-                foreach ($errors as $error) {
-                    $errorMessage .= "\n". $error;
-                }
-                $this->setRowError($i, $errorMessage);
+                $this->setRowError($i, $errors);
             }
             $output->write("*");
         }
@@ -124,9 +137,9 @@ class ImportProductsCommand extends Command
         $this->rows[$index]['status'] = $status;
     }
 
-    private function setRowError(int $index, string $error): void
+    private function setRowError(int $index, mixed $error): void
     {
-        $this->rows[$index]['error'] = $error;
+        $this->rows[$index]['error'] = is_array($error) ? implode("\n", $error) : (string)$error;
     }
 
     private function getRowsCountByStatus(string $status): int
@@ -158,6 +171,10 @@ class ImportProductsCommand extends Command
             ->setStock($stock)
             ->setPrice($price);
 
+        /**
+         * Any stock item marked as discontinued will be imported,
+         * but will have the discontinued date set as the current date.
+         */
         if ($discontinued === 'yes') {
             $product->setDiscontinued(new \DateTime());
         }

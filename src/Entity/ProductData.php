@@ -8,29 +8,28 @@ use App\Repository\ProductDataRepository;
 
 /**
  * @ORM\Entity(repositoryClass=ProductDataRepository::class)
- * @ORM\Table(name="tblProductData")
  */
 class ProductData
 {
     /**
      * @ORM\Id
      * @ORM\GeneratedValue
-     * @ORM\Column(type="integer", name="intProductDataId")
+     * @ORM\Column(type="integer")
      */
     private int $id;
 
     /**
-     * @ORM\Column(length=50, name="strProductName")
+     * @ORM\Column(length=50)
      */
     private string $productName;
 
     /**
-     * @ORM\Column(length=255, name="strProductDesc")
+     * @ORM\Column(length=255)
      */
     private string $productDesc;
 
     /**
-     * @ORM\Column(length=10, name="strProductCode")
+     * @ORM\Column(length=10)
      */
     private string $productCode;
 
@@ -45,17 +44,17 @@ class ProductData
     private ?float $price;
 
     /**
-     * @ORM\Column(type="datetime", name="dtmAdded", nullable=true)
+     * @ORM\Column(type="datetime", nullable=true)
      */
     private ?DateTime $added;
 
     /**
-     * @ORM\Column(type="datetime", name="dtmDiscontinued", nullable=true)
+     * @ORM\Column(type="datetime", nullable=true)
      */
     private ?DateTime $discontinued;
 
     /**
-     * @ORM\Column(type="datetime", name="stmTimestamp")
+     * @ORM\Column(type="datetime")
      */
     private DateTime $timestamp;
 

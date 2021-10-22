@@ -16,8 +16,8 @@ use Symfony\Component\Serializer\Encoder\CsvEncoder;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Validator\Constraint;
-use Symfony\Component\Validator\Validation;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Validation;
 
 class ImportProductsCommand extends Command
 {
@@ -62,10 +62,10 @@ class ImportProductsCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $fileName = $input->getArgument('filename');
-        $isTest = $input->getOption('test') === null;
+        $isTest = null === $input->getOption('test');
 
         if (true === $isTest) {
-            $output->writeln("Warning: this command is in test mode!");
+            $output->writeln('Warning: this command is in test mode!');
         }
 
         $serializer = new Serializer([new ObjectNormalizer()], [new CsvEncoder()]);
@@ -77,7 +77,7 @@ class ImportProductsCommand extends Command
         $validator = Validation::createValidator();
         $constraints = $this->getConstraints();
 
-        $output->write("[");
+        $output->write('[');
         foreach ($this->rows as $i => $row) {
             $errors = $validator->validate($row, $constraints);
 
@@ -106,21 +106,21 @@ class ImportProductsCommand extends Command
                 $this->setRowStatus($i, self::STATUS_SKIPPED);
                 $this->setRowError($i, $errors);
             }
-            $output->write("*");
+            $output->write('*');
         }
-        $output->writeln("]");
+        $output->writeln(']');
 
         $qty = count($this->rows);
         $output->writeln("Processed {$qty} row(s)");
         $successfulQty = $this->getRowsCountByStatus(self::STATUS_SUCCESSFUL);
         $output->writeln("Successfully {$successfulQty} row(s)");
-        $output->writeln("==========================");
+        $output->writeln('==========================');
 
         $skippedQty = $this->getRowsCountByStatus(self::STATUS_SKIPPED);
         if ($skippedQty > 0) {
             $output->writeln("Skipped {$skippedQty} row(s):");
             foreach ($this->rows as $i => $row) {
-                if ($row['status'] !== self::STATUS_SKIPPED) {
+                if (self::STATUS_SKIPPED !== $row['status']) {
                     continue;
                 }
 
@@ -130,7 +130,7 @@ class ImportProductsCommand extends Command
                 $output->writeln("Line {$nRow} with the code '{$code}': {$error}");
             }
 
-            $output->writeln("==========================");
+            $output->writeln('==========================');
         }
 
         return Command::SUCCESS;
@@ -155,7 +155,7 @@ class ImportProductsCommand extends Command
 
     private function setRowError(int $index, mixed $error): void
     {
-        $this->rows[$index]['error'] = is_array($error) ? implode("\n", $error) : (string)$error;
+        $this->rows[$index]['error'] = is_array($error) ? implode("\n", $error) : (string) $error;
     }
 
     private function getRowsCountByStatus(string $status): int
@@ -164,7 +164,7 @@ class ImportProductsCommand extends Command
 
         foreach ($this->rows as $row) {
             if ($row['status'] === $status) {
-                $count++;
+                ++$count;
             }
         }
 
@@ -176,8 +176,8 @@ class ImportProductsCommand extends Command
         $name = $row['Product Name'];
         $desc = $row['Product Description'];
         $code = $row['Product Code'];
-        $stock = (int)($row['Stock'] ?? 0);
-        $price = isset($row['Cost in GBP']) ? (float)$row['Cost in GBP'] : null;
+        $stock = (int) ($row['Stock'] ?? 0);
+        $price = isset($row['Cost in GBP']) ? (float) $row['Cost in GBP'] : null;
         $discontinued = $row['Discontinued'] ?? null;
 
         $product = (new ProductData())
@@ -187,11 +187,11 @@ class ImportProductsCommand extends Command
             ->setStock($stock)
             ->setPrice($price);
 
-        /**
+        /*
          * Any stock item marked as discontinued will be imported,
          * but will have the discontinued date set as the current date.
          */
-        if ($discontinued === 'yes') {
+        if ('yes' === $discontinued) {
             $product->setDiscontinued(new \DateTime());
         }
 

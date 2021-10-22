@@ -2,7 +2,6 @@
 
 namespace App\Tests\Domain\ImportRule;
 
-use App\Domain\ImportRule\CostFrom5OrStockFrom10Rule;
 use App\Domain\ImportRule\CostLessOrEqual1000Rule;
 use App\Entity\ProductData;
 use PHPUnit\Framework\TestCase;

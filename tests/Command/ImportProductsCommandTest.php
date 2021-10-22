@@ -2,9 +2,9 @@
 
 namespace App\Tests\Command;
 
-use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\Console\Tester\CommandTester;
 
 class ImportProductsCommandTest extends KernelTestCase
 {
@@ -27,7 +27,7 @@ class ImportProductsCommandTest extends KernelTestCase
         ]);
 
         $output = $commandTester->getDisplay();
-        $this->assertStringContainsString("Warning: this command is in test mode!", $output);
+        $this->assertStringContainsString('Warning: this command is in test mode!', $output);
         $qtyProcessing = count($rows);
         $this->assertStringContainsString("Processing {$qtyProcessing} row", $output);
         $this->assertStringContainsString("Processed {$qtyProcessing} row", $output);
@@ -49,7 +49,7 @@ class ImportProductsCommandTest extends KernelTestCase
                 'Product Code' => 'code',
                 'Stock' => 10,
                 'Cost in GBP' => 5,
-                'Discontinued' => 'yes'
+                'Discontinued' => 'yes',
             ]]],
         ];
     }

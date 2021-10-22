@@ -12,6 +12,7 @@ final class ImportRuleEngine
     public function addRule(ImportRuleInterface $rule): ImportRuleEngine
     {
         $this->rules[] = $rule;
+
         return $this;
     }
 

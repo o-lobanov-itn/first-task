@@ -8,7 +8,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Create product_data
+ * Create product_data.
  */
 final class Version20211020154506 extends AbstractMigration
 {

@@ -6,6 +6,7 @@ use App\Domain\ImportRule\CostFrom5OrStockFrom10Rule;
 use App\Domain\ImportRule\CostLessOrEqual1000Rule;
 use App\Entity\ProductData;
 use App\Service\ImportRuleEngine;
+use App\Validator\Import\Constraints\ProductDataRequirements;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -77,10 +78,9 @@ class ImportProductsCommand extends Command
         ));
 
         $validator = Validation::createValidator();
-        $constraints = $this->getConstraints();
 
         foreach ($this->rows as $i => $row) {
-            $errors = $validator->validate($row, $constraints);
+            $errors = $validator->validate($row, new ProductDataRequirements());
 
             if (0 === count($errors)) {
                 $product = $this->createProductData($row);
@@ -140,18 +140,6 @@ class ImportProductsCommand extends Command
         }
 
         return Command::SUCCESS;
-    }
-
-    private function getConstraints(): Constraint
-    {
-        return new Assert\Collection([
-            'Product Name' => [new Assert\Required(), new Assert\NotBlank()],
-            'Product Description' => [new Assert\Required(), new Assert\NotBlank()],
-            'Product Code' => [new Assert\Required(), new Assert\NotBlank()],
-            'Stock' => new Assert\PositiveOrZero(),
-            'Cost in GBP' => new Assert\AtLeastOneOf([new Assert\Blank(), new Assert\PositiveOrZero()]),
-            'Discontinued' => new Assert\AtLeastOneOf([new Assert\Blank(), new Assert\Choice(['yes'])]),
-        ]);
     }
 
     private function setRowStatus(int $index, string $status): void

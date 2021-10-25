@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Domain\ImportRule;
+namespace App\Domain\Import\Rules;
 
 use App\Entity\ProductData;
 
-class CostLessOrEqual1000Rule implements ImportRuleInterface
+class CostLessOrEqual1000Rule implements RuleInterface
 {
     public function getDescription(): string
     {

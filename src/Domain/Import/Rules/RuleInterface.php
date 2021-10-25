@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Domain\ImportRule;
+namespace App\Domain\Import\Rules;
 
 use App\Entity\ProductData;
 
-interface ImportRuleInterface
+interface RuleInterface
 {
     public function getDescription(): string;
 

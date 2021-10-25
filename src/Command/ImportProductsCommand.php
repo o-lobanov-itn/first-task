@@ -2,12 +2,14 @@
 
 namespace App\Command;
 
-use App\Domain\ImportRule\CostFrom5OrStockFrom10Rule;
-use App\Domain\ImportRule\CostLessOrEqual1000Rule;
+use App\Domain\Import\Rules\CostFrom5OrStockFrom10Rule;
+use App\Domain\Import\Rules\CostLessOrEqual1000Rule;
 use App\Entity\ProductData;
-use App\Service\ImportRuleEngine;
+use App\Service\Import\RuleEngine;
 use App\Validator\Import\Constraints\ProductDataRequirements;
+use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
+use Exception;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -16,8 +18,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Serializer\Encoder\CsvEncoder;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
-use Symfony\Component\Validator\Constraint;
-use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Validation;
 
 class ImportProductsCommand extends Command
@@ -29,15 +29,15 @@ class ImportProductsCommand extends Command
 
     private array $rows;
     private EntityManagerInterface $em;
-    private ImportRuleEngine $importRuleEngine;
+    private RuleEngine $ruleEngine;
 
-    public function __construct(EntityManagerInterface $em, ImportRuleEngine $importRuleEngine)
+    public function __construct(EntityManagerInterface $em, RuleEngine $importRuleEngine)
     {
         $this->rows = [];
         $this->em = $em;
-        $this->importRuleEngine = $importRuleEngine;
+        $this->ruleEngine = $importRuleEngine;
 
-        $this->importRuleEngine
+        $this->ruleEngine
             ->addRule(new CostFrom5OrStockFrom10Rule())
             ->addRule(new CostLessOrEqual1000Rule())
         ;
@@ -85,7 +85,7 @@ class ImportProductsCommand extends Command
             if (0 === count($errors)) {
                 $product = $this->createProductData($row);
 
-                $ruleErrors = $this->importRuleEngine->validate($product);
+                $ruleErrors = $this->ruleEngine->validate($product);
                 if (0 !== count($ruleErrors)) {
                     $this->setRowStatus($i, self::STATUS_SKIPPED);
                     $this->setRowError($i, $ruleErrors);
@@ -99,7 +99,7 @@ class ImportProductsCommand extends Command
                     }
 
                     $this->setRowStatus($i, self::STATUS_SUCCESSFUL);
-                } catch (\Exception $exception) {
+                } catch (Exception $exception) {
                     $this->setRowStatus($i, self::STATUS_SKIPPED);
                     $this->setRowError($i, $exception->getMessage());
                 }
@@ -186,7 +186,7 @@ class ImportProductsCommand extends Command
          * but will have the discontinued date set as the current date.
          */
         if ('yes' === $discontinued) {
-            $product->setDiscontinued(new \DateTime());
+            $product->setDiscontinued(new DateTime());
         }
 
         return $product;

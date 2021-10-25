@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Service;
+namespace App\Service\Import;
 
-use App\Domain\ImportRule\ImportRuleInterface;
+use App\Domain\Import\Rules\RuleInterface;
 use App\Entity\ProductData;
 
-final class ImportRuleEngine
+final class RuleEngine
 {
-    /** @var ImportRuleInterface[] */
+    /** @var RuleInterface[] */
     private array $rules;
 
-    public function addRule(ImportRuleInterface $rule): ImportRuleEngine
+    public function addRule(RuleInterface $rule): RuleEngine
     {
         $this->rules[] = $rule;
 

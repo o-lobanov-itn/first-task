@@ -2,7 +2,7 @@
 
 namespace App\Tests\Service;
 
-use App\Domain\ImportRule\ImportRuleInterface;
+use App\Domain\ImportRule\RuleInterface;
 use App\Entity\ProductData;
 use App\Service\ImportRuleEngine;
 use PHPUnit\Framework\TestCase;
@@ -13,7 +13,7 @@ class ImportRuleEngineTest extends TestCase
     {
         $engine = new ImportRuleEngine();
 
-        $rule = $this->createStub(ImportRuleInterface::class);
+        $rule = $this->createStub(RuleInterface::class);
         $rule->method('isImportable')->willReturn(true);
         $engine->addRule($rule);
 
@@ -25,7 +25,7 @@ class ImportRuleEngineTest extends TestCase
         $engine = new ImportRuleEngine();
         $ruleDescription = 'Rule description';
 
-        $rule = $this->createStub(ImportRuleInterface::class);
+        $rule = $this->createStub(RuleInterface::class);
         $rule->method('isImportable')->willReturn(false);
         $rule->method('getDescription')->willReturn($ruleDescription);
         $engine->addRule($rule);

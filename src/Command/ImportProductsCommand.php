@@ -71,13 +71,14 @@ class ImportProductsCommand extends Command
         $serializer = new Serializer([new ObjectNormalizer()], [new CsvEncoder()]);
         $this->rows = $serializer->decode(file_get_contents($fileName), 'csv');
 
-        $qty = count($this->rows);
-        $output->writeln("Processing {$qty} row(s):");
+        $output->writeln(sprintf(
+            'Processing %d row(s):',
+            count($this->rows)
+        ));
 
         $validator = Validation::createValidator();
         $constraints = $this->getConstraints();
 
-        $output->write('[');
         foreach ($this->rows as $i => $row) {
             $errors = $validator->validate($row, $constraints);
 
@@ -106,31 +107,36 @@ class ImportProductsCommand extends Command
                 $this->setRowStatus($i, self::STATUS_SKIPPED);
                 $this->setRowError($i, $errors);
             }
-            $output->write('*');
         }
-        $output->writeln(']');
 
-        $qty = count($this->rows);
-        $output->writeln("Processed {$qty} row(s)");
-        $successfulQty = $this->getRowsCountByStatus(self::STATUS_SUCCESSFUL);
-        $output->writeln("Successfully {$successfulQty} row(s)");
-        $output->writeln('==========================');
+        $output->writeln(sprintf(
+            'Processed %d row(s)',
+            count($this->rows)
+        ));
+        $output->writeln(sprintf(
+            'Successfully %d row(s)',
+            $this->getRowsCountByStatus(self::STATUS_SUCCESSFUL)
+        ));
 
         $skippedQty = $this->getRowsCountByStatus(self::STATUS_SKIPPED);
         if ($skippedQty > 0) {
-            $output->writeln("Skipped {$skippedQty} row(s):");
+            $output->writeln(sprintf(
+                'Skipped %d row(s):',
+                $skippedQty
+            ));
+
             foreach ($this->rows as $i => $row) {
                 if (self::STATUS_SKIPPED !== $row['status']) {
                     continue;
                 }
 
-                $nRow = $i + 2;
-                $code = $row['Product Code'] ?? 'Unknown';
-                $error = $row['error'] ?? '-';
-                $output->writeln("Line {$nRow} with the code '{$code}': {$error}");
+                $output->writeln(sprintf(
+                    'Line %d with the code %s: %s',
+                    $i + 2,
+                    $row['Product Code'] ?? 'Unknown',
+                    $row['error'] ?? '-'
+                ));
             }
-
-            $output->writeln('==========================');
         }
 
         return Command::SUCCESS;

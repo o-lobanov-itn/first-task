@@ -12,16 +12,14 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class ImportProductsCommand extends Command
 {
-    private const STATUS_SUCCESSFUL = 'successful';
-    private const STATUS_SKIPPED = 'skipped';
-
     protected static $defaultName = 'app:import-products';
 
-    private array $rows;
+    private int $qtyProcessed;
+    private int $qtySuccessfully;
+
     private EntityManagerInterface $em;
     private ProductDataFactory $productDataFactory;
     private RuleEngine $ruleEngine;
@@ -33,7 +31,9 @@ class ImportProductsCommand extends Command
         RuleEngine $ruleEngine,
         CsvService $csvService
     ) {
-        $this->rows = [];
+        $this->qtyProcessed = 0;
+        $this->qtySuccessfully = 0;
+
         $this->em = $em;
         $this->productDataFactory = $productDataFactory;
         $this->ruleEngine = $ruleEngine;
@@ -66,14 +66,11 @@ class ImportProductsCommand extends Command
             $output->writeln('Warning: this command is in test mode!');
         }
 
-        $this->rows = $this->csvService->import($fileName);
+        $this->csvService->init($fileName);
 
-        $output->writeln(sprintf(
-            'Processing %d row(s):',
-            count($this->rows)
-        ));
+        while ($row = $this->csvService->getRow()) {
+            ++$this->qtyProcessed;
 
-        foreach ($this->rows as $i => $row) {
             try {
                 $product = $this->productDataFactory->createFromRow($row);
 
@@ -84,66 +81,33 @@ class ImportProductsCommand extends Command
                     $this->em->flush();
                 }
 
-                $this->setRowStatus($i, self::STATUS_SUCCESSFUL);
+                ++$this->qtySuccessfully;
             } catch (Exception $exception) {
-                $this->setRowStatus($i, self::STATUS_SKIPPED);
-                $this->setRowError($i, $exception->getMessage());
-            }
-        }
-
-        $output->writeln(sprintf(
-            'Processed %d row(s)',
-            count($this->rows)
-        ));
-        $output->writeln(sprintf(
-            'Successfully %d row(s)',
-            $this->getRowsCountByStatus(self::STATUS_SUCCESSFUL)
-        ));
-
-        $skippedQty = $this->getRowsCountByStatus(self::STATUS_SKIPPED);
-        if ($skippedQty > 0) {
-            $output->writeln(sprintf(
-                'Skipped %d row(s):',
-                $skippedQty
-            ));
-
-            foreach ($this->rows as $i => $row) {
-                if (self::STATUS_SKIPPED !== $row['status']) {
-                    continue;
-                }
-
                 $output->writeln(sprintf(
-                    'Line %d with the code %s: %s',
-                    $i + 2,
-                    $row['Product Code'] ?? 'Unknown',
-                    $row['error'] ?? '-'
+                    'Skipped line %d: %s',
+                    $this->csvService->getRowNumber(),
+                    $exception->getMessage()
                 ));
             }
         }
 
-        return Command::SUCCESS;
-    }
+        $output->writeln('===================================');
+        $output->writeln(sprintf(
+            'Processed %d row(s)',
+            $this->qtyProcessed
+        ));
+        $output->writeln(sprintf(
+            'Successfully %d row(s)',
+            $this->qtySuccessfully
+        ));
 
-    private function setRowStatus(int $index, string $status): void
-    {
-        $this->rows[$index]['status'] = $status;
-    }
-
-    private function setRowError(int $index, mixed $error): void
-    {
-        $this->rows[$index]['error'] = is_array($error) ? implode("\n", $error) : (string) $error;
-    }
-
-    private function getRowsCountByStatus(string $status): int
-    {
-        $count = 0;
-
-        foreach ($this->rows as $row) {
-            if ($row['status'] === $status) {
-                ++$count;
-            }
+        if ($this->qtyProcessed != $this->qtySuccessfully) {
+            $output->writeln(sprintf(
+                'Skipped %d row(s)',
+                $this->qtyProcessed - $this->qtySuccessfully
+            ));
         }
 
-        return $count;
+        return Command::SUCCESS;
     }
 }

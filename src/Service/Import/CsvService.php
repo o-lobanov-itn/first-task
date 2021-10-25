@@ -2,16 +2,49 @@
 
 namespace App\Service\Import;
 
-use Symfony\Component\Serializer\Encoder\CsvEncoder;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
-use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\Filesystem\Exception\FileNotFoundException;
 
 class CsvService
 {
-    public function import($filename, $options = []): array
-    {
-        $serializer = new Serializer([new ObjectNormalizer()], [new CsvEncoder()]);
+    private $handle;
 
-        return $serializer->decode(file_get_contents($filename), CsvEncoder::FORMAT, $options);
+    private array $keys;
+    private int $rowNumber;
+
+    public function init(string $filename): void
+    {
+        $this->handle = fopen($filename, 'r');
+
+        if (false === $this->handle) {
+            throw new FileNotFoundException();
+        }
+
+        $this->keys = fgetcsv($this->handle);
+        $this->rowNumber = 0;
+    }
+
+    public function getRow(): ?array
+    {
+        $data = fgetcsv($this->handle);
+
+        if (false === $data) {
+            fclose($this->handle);
+
+            return null;
+        }
+
+        ++$this->rowNumber;
+
+        $result = [];
+        foreach ($this->keys as $i => $key) {
+            $result[$key] = $data[$i] ?? null;
+        }
+
+        return $result;
+    }
+
+    public function getRowNumber(): int
+    {
+        return $this->rowNumber;
     }
 }

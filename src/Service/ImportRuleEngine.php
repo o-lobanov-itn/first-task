@@ -7,6 +7,7 @@ use App\Entity\ProductData;
 
 final class ImportRuleEngine
 {
+    /** @var ImportRuleInterface[] */
     private array $rules;
 
     public function addRule(ImportRuleInterface $rule): ImportRuleEngine
@@ -20,7 +21,6 @@ final class ImportRuleEngine
     {
         $errors = [];
 
-        /** @var ImportRuleInterface $rule */
         foreach ($this->rules as $rule) {
             if (false === $rule->isImportable($productData)) {
                 $errors[] = $rule->getDescription();

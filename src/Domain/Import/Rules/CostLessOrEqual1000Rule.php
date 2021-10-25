@@ -3,20 +3,17 @@
 namespace App\Domain\Import\Rules;
 
 use App\Entity\ProductData;
+use App\Exception\Import\RuleCheckingException;
 
 class CostLessOrEqual1000Rule implements RuleInterface
 {
-    public function getDescription(): string
+    /**
+     * @throws RuleCheckingException
+     */
+    public function check(ProductData $productData): void
     {
-        return 'Any stock items which cost over $1000 will not be imported.';
-    }
-
-    public function isImportable(ProductData $productData): bool
-    {
-        if ($productData->getPrice() <= 1000) {
-            return true;
+        if ($productData->getPrice() > 1000) {
+            throw new RuleCheckingException('Any stock items which cost over $1000 will not be imported.');
         }
-
-        return false;
     }
 }

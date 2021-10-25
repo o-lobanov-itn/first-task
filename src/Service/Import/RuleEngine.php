@@ -4,8 +4,9 @@ namespace App\Service\Import;
 
 use App\Domain\Import\Rules\RuleInterface;
 use App\Entity\ProductData;
+use App\Exception\Import\RuleCheckingException;
 
-final class RuleEngine
+final class RuleEngine implements RuleInterface
 {
     /** @var RuleInterface[] */
     private array $rules;
@@ -24,16 +25,20 @@ final class RuleEngine
         return $this;
     }
 
-    public function validate(ProductData $productData): array
+    public function check(ProductData $productData): void
     {
         $errors = [];
 
         foreach ($this->rules as $rule) {
-            if (false === $rule->isImportable($productData)) {
-                $errors[] = $rule->getDescription();
+            try {
+                $rule->check($productData);
+            } catch (RuleCheckingException $exception) {
+                $errors[] = $exception->getMessage();
             }
         }
 
-        return $errors;
+        if (0 !== count($errors)) {
+            throw new RuleCheckingException(implode("\n", $errors));
+        }
     }
 }

@@ -2,11 +2,9 @@
 
 namespace App\Command;
 
-use App\Entity\ProductData;
 use App\Service\Import\CsvService;
+use App\Service\Import\ProductDataFactory;
 use App\Service\Import\RuleEngine;
-use App\Validator\Import\Constraints\ProductDataRequirements;
-use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use Symfony\Component\Console\Command\Command;
@@ -25,19 +23,19 @@ class ImportProductsCommand extends Command
 
     private array $rows;
     private EntityManagerInterface $em;
-    private ValidatorInterface $validator;
+    private ProductDataFactory $productDataFactory;
     private RuleEngine $ruleEngine;
     private CsvService $csvService;
 
     public function __construct(
         EntityManagerInterface $em,
-        ValidatorInterface $validator,
+        ProductDataFactory $productDataFactory,
         RuleEngine $ruleEngine,
         CsvService $csvService
     ) {
         $this->rows = [];
         $this->em = $em;
-        $this->validator = $validator;
+        $this->productDataFactory = $productDataFactory;
         $this->ruleEngine = $ruleEngine;
         $this->csvService = $csvService;
 
@@ -76,32 +74,20 @@ class ImportProductsCommand extends Command
         ));
 
         foreach ($this->rows as $i => $row) {
-            $errors = $this->validator->validate($row, new ProductDataRequirements());
+            try {
+                $product = $this->productDataFactory->createFromRow($row);
 
-            if (0 === count($errors)) {
-                $product = $this->createProductData($row);
+                $this->ruleEngine->check($product);
 
-                $ruleErrors = $this->ruleEngine->validate($product);
-                if (0 !== count($ruleErrors)) {
-                    $this->setRowStatus($i, self::STATUS_SKIPPED);
-                    $this->setRowError($i, $ruleErrors);
-                    continue;
+                if (false === $isTest) {
+                    $this->em->persist($product);
+                    $this->em->flush();
                 }
 
-                try {
-                    if (false === $isTest) {
-                        $this->em->persist($product);
-                        $this->em->flush();
-                    }
-
-                    $this->setRowStatus($i, self::STATUS_SUCCESSFUL);
-                } catch (Exception $exception) {
-                    $this->setRowStatus($i, self::STATUS_SKIPPED);
-                    $this->setRowError($i, $exception->getMessage());
-                }
-            } else {
+                $this->setRowStatus($i, self::STATUS_SUCCESSFUL);
+            } catch (Exception $exception) {
                 $this->setRowStatus($i, self::STATUS_SKIPPED);
-                $this->setRowError($i, $errors);
+                $this->setRowError($i, $exception->getMessage());
             }
         }
 
@@ -159,32 +145,5 @@ class ImportProductsCommand extends Command
         }
 
         return $count;
-    }
-
-    private function createProductData(array $row): ProductData
-    {
-        $name = $row['Product Name'];
-        $desc = $row['Product Description'];
-        $code = $row['Product Code'];
-        $stock = (int) ($row['Stock'] ?? 0);
-        $price = isset($row['Cost in GBP']) ? (float) $row['Cost in GBP'] : null;
-        $discontinued = $row['Discontinued'] ?? null;
-
-        $product = (new ProductData())
-            ->setProductName($name)
-            ->setProductDesc($desc)
-            ->setProductCode($code)
-            ->setStock($stock)
-            ->setPrice($price);
-
-        /*
-         * Any stock item marked as discontinued will be imported,
-         * but will have the discontinued date set as the current date.
-         */
-        if ('yes' === $discontinued) {
-            $product->setDiscontinued(new DateTime());
-        }
-
-        return $product;
     }
 }

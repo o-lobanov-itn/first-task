@@ -3,24 +3,17 @@
 namespace App\Domain\Import\Rules;
 
 use App\Entity\ProductData;
+use App\Exception\Import\RuleCheckingException;
 
 class CostFrom5OrStockFrom10Rule implements RuleInterface
 {
-    public function getDescription(): string
+    /**
+     * @throws RuleCheckingException
+     */
+    public function check(ProductData $productData): void
     {
-        return 'Any stock item which costs less that $5 and has less than 10 stock will not be imported.';
-    }
-
-    public function isImportable(ProductData $productData): bool
-    {
-        if ($productData->getPrice() >= 5) {
-            return true;
+        if ($productData->getPrice() < 5 && $productData->getStock() < 10) {
+            throw new RuleCheckingException('Any stock item which costs less that $5 and has less than 10 stock will not be imported.');
         }
-
-        if ($productData->getStock() >= 10) {
-            return true;
-        }
-
-        return false;
     }
 }

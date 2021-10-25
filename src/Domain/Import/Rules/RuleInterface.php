@@ -3,10 +3,12 @@
 namespace App\Domain\Import\Rules;
 
 use App\Entity\ProductData;
+use App\Exception\Import\RuleCheckingException;
 
 interface RuleInterface
 {
-    public function getDescription(): string;
-
-    public function isImportable(ProductData $productData): bool;
+    /**
+     * @throws RuleCheckingException
+     */
+    public function check(ProductData $productData): void;
 }

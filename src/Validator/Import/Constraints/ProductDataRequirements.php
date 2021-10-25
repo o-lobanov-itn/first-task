@@ -2,8 +2,8 @@
 
 namespace App\Validator\Import\Constraints;
 
-use Symfony\Component\Validator\Constraints\Compound;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Constraints\Compound;
 
 class ProductDataRequirements extends Compound
 {
@@ -17,7 +17,7 @@ class ProductDataRequirements extends Compound
                 'Stock' => new Assert\PositiveOrZero(),
                 'Cost in GBP' => new Assert\AtLeastOneOf([new Assert\Blank(), new Assert\PositiveOrZero()]),
                 'Discontinued' => new Assert\AtLeastOneOf([new Assert\Blank(), new Assert\Choice(['yes'])]),
-            ])
+            ]),
         ];
     }
 }

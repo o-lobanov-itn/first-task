@@ -10,6 +10,13 @@ final class RuleEngine
     /** @var RuleInterface[] */
     private array $rules;
 
+    public function __construct(array $rules)
+    {
+        foreach ($rules as $rule) {
+            $this->addRule($rule);
+        }
+    }
+
     public function addRule(RuleInterface $rule): RuleEngine
     {
         $this->rules[] = $rule;

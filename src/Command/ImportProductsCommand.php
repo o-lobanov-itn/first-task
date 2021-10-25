@@ -2,9 +2,8 @@
 
 namespace App\Command;
 
-use App\Domain\Import\Rules\CostFrom5OrStockFrom10Rule;
-use App\Domain\Import\Rules\CostLessOrEqual1000Rule;
 use App\Entity\ProductData;
+use App\Service\Import\CsvService;
 use App\Service\Import\RuleEngine;
 use App\Validator\Import\Constraints\ProductDataRequirements;
 use DateTime;
@@ -15,10 +14,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Serializer\Encoder\CsvEncoder;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
-use Symfony\Component\Serializer\Serializer;
-use Symfony\Component\Validator\Validation;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class ImportProductsCommand extends Command
 {
@@ -29,18 +25,21 @@ class ImportProductsCommand extends Command
 
     private array $rows;
     private EntityManagerInterface $em;
+    private ValidatorInterface $validator;
     private RuleEngine $ruleEngine;
+    private CsvService $csvService;
 
-    public function __construct(EntityManagerInterface $em, RuleEngine $importRuleEngine)
-    {
+    public function __construct(
+        EntityManagerInterface $em,
+        ValidatorInterface $validator,
+        RuleEngine $ruleEngine,
+        CsvService $csvService
+    ) {
         $this->rows = [];
         $this->em = $em;
-        $this->ruleEngine = $importRuleEngine;
-
-        $this->ruleEngine
-            ->addRule(new CostFrom5OrStockFrom10Rule())
-            ->addRule(new CostLessOrEqual1000Rule())
-        ;
+        $this->validator = $validator;
+        $this->ruleEngine = $ruleEngine;
+        $this->csvService = $csvService;
 
         parent::__construct();
     }
@@ -69,18 +68,15 @@ class ImportProductsCommand extends Command
             $output->writeln('Warning: this command is in test mode!');
         }
 
-        $serializer = new Serializer([new ObjectNormalizer()], [new CsvEncoder()]);
-        $this->rows = $serializer->decode(file_get_contents($fileName), 'csv');
+        $this->rows = $this->csvService->import($fileName);
 
         $output->writeln(sprintf(
             'Processing %d row(s):',
             count($this->rows)
         ));
 
-        $validator = Validation::createValidator();
-
         foreach ($this->rows as $i => $row) {
-            $errors = $validator->validate($row, new ProductDataRequirements());
+            $errors = $this->validator->validate($row, new ProductDataRequirements());
 
             if (0 === count($errors)) {
                 $product = $this->createProductData($row);

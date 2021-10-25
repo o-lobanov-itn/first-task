@@ -25,7 +25,7 @@ final class Version20211020154506 extends AbstractMigration
             product_desc VARCHAR(255) NOT NULL,
             product_code VARCHAR(10) NOT NULL,
             stock INT DEFAULT 0 NOT NULL,
-            price DOUBLE PRECISION DEFAULT NULL,
+            price DECIMAL(10,2) DEFAULT NULL,
             added DATETIME DEFAULT NULL,
             discontinued DATETIME DEFAULT NULL,
             timestamp DATETIME NOT NULL,

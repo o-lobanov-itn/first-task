@@ -2,8 +2,9 @@
 
 namespace App\Tests\Domain\ImportRule;
 
-use App\Domain\ImportRule\CostFrom5OrStockFrom10Rule;
+use App\Domain\Import\Rules\CostFrom5OrStockFrom10Rule;
 use App\Entity\ProductData;
+use App\Exception\Import\RuleCheckingException;
 use PHPUnit\Framework\TestCase;
 
 class CostFrom5OrStockFrom10RuleTest extends TestCase
@@ -11,7 +12,7 @@ class CostFrom5OrStockFrom10RuleTest extends TestCase
     /**
      * @dataProvider dataProvider
      */
-    public function testIsImportable(int $stock, float $price, bool $isImportable): void
+    public function testCheck(int $stock, float $price, bool $isImportable): void
     {
         $productData = (new ProductData())
             ->setStock($stock)
@@ -19,7 +20,14 @@ class CostFrom5OrStockFrom10RuleTest extends TestCase
         ;
 
         $rule = new CostFrom5OrStockFrom10Rule();
-        self::assertEquals($isImportable, $rule->isImportable($productData));
+
+        if (false === $isImportable) {
+            $this->expectException(RuleCheckingException::class);
+        } else {
+            $this->expectNotToPerformAssertions();
+        }
+
+        $rule->check($productData);
     }
 
     public function dataProvider(): array

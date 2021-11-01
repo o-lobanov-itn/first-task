@@ -28,9 +28,8 @@ class ImportProductsCommandTest extends KernelTestCase
 
         $output = $commandTester->getDisplay();
         $this->assertStringContainsString('Warning: this command is in test mode!', $output);
-        $qtyProcessing = count($rows);
-        $this->assertStringContainsString("Processing {$qtyProcessing} row", $output);
-        $this->assertStringContainsString("Processed {$qtyProcessing} row", $output);
+        $qtyProcessed = count($rows);
+        $this->assertStringContainsString("Processed {$qtyProcessed} row", $output);
         $this->assertStringContainsString("Successfully {$qtySuccessfully} row", $output);
 
         unlink($tmpFilename);

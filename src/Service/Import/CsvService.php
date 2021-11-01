@@ -19,7 +19,7 @@ class CsvService
             throw new FileNotFoundException();
         }
 
-        $this->keys = fgetcsv($this->handle);
+        $this->keys = fgetcsv($this->handle) ?: [];
         $this->rowNumber = 0;
     }
 

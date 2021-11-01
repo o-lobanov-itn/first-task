@@ -6,7 +6,7 @@ use App\Entity\ProductData;
 use DateTime;
 
 /**
- * Inspired by https://designpatternsphp.readthedocs.io/en/latest/Structural/DataMapper/README.html
+ * Inspired by https://designpatternsphp.readthedocs.io/en/latest/Structural/DataMapper/README.html.
  */
 class ProductDataMapper
 {

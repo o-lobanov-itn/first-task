@@ -2,8 +2,9 @@
 
 namespace App\Tests\Domain\ImportRule;
 
-use App\Domain\ImportRule\CostLessOrEqual1000Rule;
+use App\Domain\Import\Rules\CostLessOrEqual1000Rule;
 use App\Entity\ProductData;
+use App\Exception\Import\RuleCheckingException;
 use PHPUnit\Framework\TestCase;
 
 class CostLessOrEqual1000RuleTest extends TestCase
@@ -11,14 +12,21 @@ class CostLessOrEqual1000RuleTest extends TestCase
     /**
      * @dataProvider dataProvider
      */
-    public function testIsImportable(float $price, bool $isImportable): void
+    public function testCheck(float $price, bool $isImportable): void
     {
         $productData = (new ProductData())
             ->setPrice($price)
         ;
 
         $rule = new CostLessOrEqual1000Rule();
-        self::assertEquals($isImportable, $rule->isImportable($productData));
+
+        if (false === $isImportable) {
+            $this->expectException(RuleCheckingException::class);
+        } else {
+            $this->expectNotToPerformAssertions();
+        }
+
+        $rule->check($productData);
     }
 
     public function dataProvider(): array
